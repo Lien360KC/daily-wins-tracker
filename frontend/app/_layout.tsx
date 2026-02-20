@@ -4,11 +4,11 @@ import { StatusBar } from 'expo-status-bar';
 import { useHabitStore } from '../src/store/habitStore';
 
 export default function RootLayout() {
-  const isDarkMode = useHabitStore((state) => state.isDarkMode);
+  const settings = useHabitStore((state) => state.settings);
 
   return (
     <>
-      <StatusBar style={isDarkMode ? 'light' : 'dark'} />
+      <StatusBar style={settings.isDarkMode ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
