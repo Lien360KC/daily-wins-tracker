@@ -266,6 +266,8 @@ export const useHabitStore = create<HabitState>()(
 
       // Habit actions
       addHabit: (name, icon, color, groupId, frequency) => {
+        const groupHabits = get().habits.filter((h) => h.groupId === groupId);
+        const maxOrder = groupHabits.length > 0 ? Math.max(...groupHabits.map((h) => h.order ?? 0)) + 1 : 0;
         const newHabit: Habit = {
           id: Date.now().toString(),
           name,
@@ -277,6 +279,7 @@ export const useHabitStore = create<HabitState>()(
           currentStreak: 0,
           longestStreak: 0,
           createdAt: new Date().toISOString(),
+          order: maxOrder,
         };
         set((state) => ({ habits: [...state.habits, newHabit] }));
       },
@@ -314,6 +317,57 @@ export const useHabitStore = create<HabitState>()(
           return { habits: updatedHabits };
         });
         get().checkAndUnlockRewards();
+      },
+
+      moveHabit: (habitId, newGroupId) => {
+        set((state) => {
+          const habit = state.habits.find((h) => h.id === habitId);
+          if (!habit) return state;
+          
+          // Get max order in new group
+          const newGroupHabits = state.habits.filter((h) => h.groupId === newGroupId);
+          const maxOrder = newGroupHabits.length > 0 ? Math.max(...newGroupHabits.map((h) => h.order ?? 0)) + 1 : 0;
+          
+          return {
+            habits: state.habits.map((h) =>
+              h.id === habitId ? { ...h, groupId: newGroupId, order: maxOrder } : h
+            ),
+          };
+        });
+      },
+
+      reorderHabit: (habitId, direction) => {
+        set((state) => {
+          const habit = state.habits.find((h) => h.id === habitId);
+          if (!habit) return state;
+          
+          const groupHabits = state.habits
+            .filter((h) => h.groupId === habit.groupId)
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+          
+          const currentIndex = groupHabits.findIndex((h) => h.id === habitId);
+          const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+          
+          if (targetIndex < 0 || targetIndex >= groupHabits.length) return state;
+          
+          const targetHabit = groupHabits[targetIndex];
+          const currentOrder = habit.order ?? 0;
+          const targetOrder = targetHabit.order ?? 0;
+          
+          return {
+            habits: state.habits.map((h) => {
+              if (h.id === habitId) return { ...h, order: targetOrder };
+              if (h.id === targetHabit.id) return { ...h, order: currentOrder };
+              return h;
+            }),
+          };
+        });
+      },
+
+      getHabitsInGroup: (groupId) => {
+        return get().habits
+          .filter((h) => h.groupId === groupId)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       },
 
       // Reward actions
