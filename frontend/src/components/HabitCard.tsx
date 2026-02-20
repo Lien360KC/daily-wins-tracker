@@ -15,8 +15,12 @@ interface HabitCardProps {
   habit: Habit;
   theme: Theme;
   onToggle: () => void;
-  onDelete: () => void;
+  onEdit: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
   isDueToday: boolean;
+  isFirst: boolean;
+  isLast: boolean;
 }
 
 const getFrequencyText = (habit: Habit): string => {
@@ -39,8 +43,12 @@ export const HabitCard: React.FC<HabitCardProps> = ({
   habit,
   theme,
   onToggle,
-  onDelete,
+  onEdit,
+  onMoveUp,
+  onMoveDown,
   isDueToday,
+  isFirst,
+  isLast,
 }) => {
   const today = format(new Date(), 'yyyy-MM-dd');
   const isCompleted = habit.completedDates.includes(today);
@@ -54,6 +62,25 @@ export const HabitCard: React.FC<HabitCardProps> = ({
         opacity: isDueToday ? 1 : 0.5,
       }
     ]}>
+      {/* Reorder buttons */}
+      <View style={styles.reorderButtons}>
+        <TouchableOpacity 
+          style={[styles.reorderBtn, { opacity: isFirst ? 0.3 : 1 }]}
+          onPress={onMoveUp}
+          disabled={isFirst}
+        >
+          <Ionicons name="chevron-up" size={16} color={theme.textMuted} />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.reorderBtn, { opacity: isLast ? 0.3 : 1 }]}
+          onPress={onMoveDown}
+          disabled={isLast}
+        >
+          <Ionicons name="chevron-down" size={16} color={theme.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Checkbox */}
       <Pressable
         style={[
           styles.checkbox, 
@@ -66,14 +93,15 @@ export const HabitCard: React.FC<HabitCardProps> = ({
         disabled={!isDueToday}
       >
         {isCompleted && (
-          <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+          <Ionicons name="checkmark" size={16} color="#FFFFFF" />
         )}
       </Pressable>
       
-      <View style={styles.content}>
+      {/* Content - tap to edit */}
+      <TouchableOpacity style={styles.content} onPress={onEdit} activeOpacity={0.7}>
         <View style={styles.header}>
           <View style={[styles.iconContainer, { backgroundColor: habit.color + '20' }]}>
-            <Ionicons name={habit.icon as any} size={18} color={habit.color} />
+            <Ionicons name={habit.icon as any} size={16} color={habit.color} />
           </View>
           <View style={styles.titleContainer}>
             <Text style={[styles.habitName, { color: theme.text }, isCompleted && styles.completedText]}>
@@ -87,22 +115,23 @@ export const HabitCard: React.FC<HabitCardProps> = ({
         
         <View style={styles.stats}>
           <View style={styles.statItem}>
-            <Ionicons name="flame" size={14} color={theme.warning} />
+            <Ionicons name="flame" size={12} color={theme.warning} />
             <Text style={[styles.statText, { color: theme.textSecondary }]}>
-              {habit.currentStreak} day streak
+              {habit.currentStreak}
             </Text>
           </View>
           <View style={styles.statItem}>
-            <Ionicons name="trophy" size={14} color={theme.primary} />
+            <Ionicons name="trophy" size={12} color={theme.primary} />
             <Text style={[styles.statText, { color: theme.textSecondary }]}>
-              Best: {habit.longestStreak}
+              {habit.longestStreak}
             </Text>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
       
-      <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
-        <Ionicons name="trash-outline" size={18} color={theme.textMuted} />
+      {/* Edit button */}
+      <TouchableOpacity style={styles.editButton} onPress={onEdit}>
+        <Ionicons name="pencil" size={16} color={theme.textMuted} />
       </TouchableOpacity>
     </View>
   );
@@ -112,19 +141,27 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
+    padding: 10,
+    paddingLeft: 4,
     borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 10,
+    marginBottom: 8,
+  },
+  reorderButtons: {
+    flexDirection: 'column',
+    marginRight: 6,
+  },
+  reorderBtn: {
+    padding: 2,
   },
   checkbox: {
-    width: 26,
-    height: 26,
-    borderRadius: 7,
+    width: 24,
+    height: 24,
+    borderRadius: 6,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   content: {
     flex: 1,
@@ -132,26 +169,26 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   iconContainer: {
-    width: 28,
-    height: 28,
+    width: 26,
+    height: 26,
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 8,
   },
   titleContainer: {
     flex: 1,
   },
   habitName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
   },
   frequencyBadge: {
-    fontSize: 11,
-    marginTop: 2,
+    fontSize: 10,
+    marginTop: 1,
   },
   completedText: {
     textDecorationLine: 'line-through',
@@ -159,17 +196,17 @@ const styles = StyleSheet.create({
   },
   stats: {
     flexDirection: 'row',
-    gap: 14,
+    gap: 12,
   },
   statItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
   },
   statText: {
-    fontSize: 12,
+    fontSize: 11,
   },
-  deleteButton: {
+  editButton: {
     padding: 8,
   },
 });
