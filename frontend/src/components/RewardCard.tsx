@@ -18,6 +18,13 @@ const REWARD_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   medal: 'medal',
   crown: 'ribbon',
   rocket: 'rocket',
+  ribbon: 'ribbon',
+  diamond: 'diamond',
+  gift: 'gift',
+  heart: 'heart',
+  'thumbs-up': 'thumbs-up',
+  happy: 'happy',
+  sparkles: 'sparkles',
 };
 
 export const RewardCard: React.FC<RewardCardProps> = ({
@@ -49,15 +56,22 @@ export const RewardCard: React.FC<RewardCardProps> = ({
       >
         <Ionicons
           name={iconName}
-          size={28}
+          size={26}
           color={isUnlocked ? '#FFFFFF' : theme.textMuted}
         />
       </View>
       
       <View style={styles.content}>
-        <Text style={[styles.title, { color: theme.text }]}>
-          {reward.title}
-        </Text>
+        <View style={styles.titleRow}>
+          <Text style={[styles.title, { color: theme.text }]}>
+            {reward.title}
+          </Text>
+          {reward.isCustom && (
+            <View style={[styles.customBadge, { backgroundColor: theme.accentLight }]}>
+              <Text style={[styles.customBadgeText, { color: theme.accent }]}>Custom</Text>
+            </View>
+          )}
+        </View>
         <Text style={[styles.description, { color: theme.textSecondary }]}>
           {reward.description}
         </Text>
@@ -94,26 +108,40 @@ export const RewardCard: React.FC<RewardCardProps> = ({
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    padding: 16,
+    padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: 52,
+    height: 52,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   content: {
     flex: 1,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 2,
+  },
   title: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    marginBottom: 4,
+  },
+  customBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  customBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
   description: {
     fontSize: 13,
@@ -135,8 +163,8 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   progressText: {
-    fontSize: 12,
-    minWidth: 60,
+    fontSize: 11,
+    minWidth: 55,
   },
   unlockedBadge: {
     flexDirection: 'row',
