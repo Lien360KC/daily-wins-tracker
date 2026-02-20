@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,14 +15,20 @@ import { lightTheme, darkTheme } from '../../src/theme/colors';
 import { ProgressRing } from '../../src/components/ProgressRing';
 import { AddHabitModal } from '../../src/components/AddHabitModal';
 import { AddGroupModal } from '../../src/components/AddGroupModal';
+import { EditGroupModal } from '../../src/components/EditGroupModal';
 import { GroupSection } from '../../src/components/GroupSection';
 import { GroupStatsModal } from '../../src/components/GroupStatsModal';
+import { CelebrationEffect, CelebrationRef } from '../../src/components/CelebrationEffect';
 
 export default function TodayScreen() {
   const [habitModalVisible, setHabitModalVisible] = useState(false);
   const [groupModalVisible, setGroupModalVisible] = useState(false);
+  const [editGroupModalVisible, setEditGroupModalVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<HabitGroup | null>(null);
+  const [hasShownCelebration, setHasShownCelebration] = useState(false);
+  
+  const celebrationRef = useRef<CelebrationRef>(null);
   
   const {
     habits,
@@ -30,6 +36,8 @@ export default function TodayScreen() {
     settings,
     addHabit,
     addGroup,
+    updateGroup,
+    removeGroup,
     removeHabit,
     toggleHabitCompletion,
     getTodayProgress,
@@ -42,6 +50,18 @@ export default function TodayScreen() {
   const today = format(new Date(), 'yyyy-MM-dd');
   const { completed, total } = getTodayProgress();
   const progress = total > 0 ? (completed / total) * 100 : 0;
+
+  // Check for 100% completion and trigger celebration
+  useEffect(() => {
+    if (progress === 100 && total > 0 && !hasShownCelebration) {
+      celebrationRef.current?.fire();
+      setHasShownCelebration(true);
+    }
+    // Reset celebration flag when progress drops below 100
+    if (progress < 100) {
+      setHasShownCelebration(false);
+    }
+  }, [progress, total, hasShownCelebration]);
 
   const handleDeleteHabit = (id: string, name: string) => {
     Alert.alert(
@@ -63,6 +83,11 @@ export default function TodayScreen() {
     setStatsModalVisible(true);
   };
 
+  const handleEditGroup = (group: HabitGroup) => {
+    setSelectedGroup(group);
+    setEditGroupModalVisible(true);
+  };
+
   const getMotivationalMessage = () => {
     if (total === 0) return "Add your first habit to get started!";
     if (completed === total) return "You crushed it today!";
@@ -76,6 +101,8 @@ export default function TodayScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: settings.backgroundColor }]}>
+      <CelebrationEffect ref={celebrationRef} />
+      
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
@@ -102,9 +129,9 @@ export default function TodayScreen() {
               size={90}
               strokeWidth={9}
               backgroundColor={theme.border}
-              progressColor={theme.primary}
+              progressColor={progress === 100 ? theme.success : theme.primary}
             >
-              <Text style={[styles.progressPercent, { color: theme.text }]}>
+              <Text style={[styles.progressPercent, { color: progress === 100 ? theme.success : theme.text }]}>
                 {Math.round(progress)}%
               </Text>
             </ProgressRing>
@@ -115,7 +142,7 @@ export default function TodayScreen() {
               <Text style={[styles.progressSubtitle, { color: theme.textSecondary }]}>
                 {completed} of {total} habits complete
               </Text>
-              <Text style={[styles.motivational, { color: theme.primary }]}>
+              <Text style={[styles.motivational, { color: progress === 100 ? theme.success : theme.primary }]}>
                 {getMotivationalMessage()}
               </Text>
             </View>
@@ -158,6 +185,7 @@ export default function TodayScreen() {
                   onToggleHabit={(habitId) => toggleHabitCompletion(habitId, today)}
                   onDeleteHabit={handleDeleteHabit}
                   onViewStats={() => handleViewStats(group)}
+                  onEditGroup={() => handleEditGroup(group)}
                   isHabitDueToday={(habit) => isHabitDueOnDate(habit, today)}
                 />
               );
@@ -179,6 +207,15 @@ export default function TodayScreen() {
         visible={groupModalVisible}
         onClose={() => setGroupModalVisible(false)}
         onAdd={addGroup}
+        theme={theme}
+      />
+
+      <EditGroupModal
+        visible={editGroupModalVisible}
+        onClose={() => setEditGroupModalVisible(false)}
+        onSave={updateGroup}
+        onDelete={removeGroup}
+        group={selectedGroup}
         theme={theme}
       />
 
