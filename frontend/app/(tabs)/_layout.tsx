@@ -5,8 +5,8 @@ import { useHabitStore } from '../../src/store/habitStore';
 import { lightTheme, darkTheme } from '../../src/theme/colors';
 
 export default function TabLayout() {
-  const isDarkMode = useHabitStore((state) => state.isDarkMode);
-  const theme = isDarkMode ? darkTheme : lightTheme;
+  const settings = useHabitStore((state) => state.settings);
+  const theme = settings.isDarkMode ? darkTheme : lightTheme;
 
   return (
     <Tabs
