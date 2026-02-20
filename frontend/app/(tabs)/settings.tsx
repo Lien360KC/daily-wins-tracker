@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -12,21 +12,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useHabitStore } from '../../src/store/habitStore';
 import { lightTheme, darkTheme } from '../../src/theme/colors';
+import { BackgroundPicker } from '../../src/components/BackgroundPicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen() {
-  const { habits, isDarkMode, toggleDarkMode } = useHabitStore();
-  const theme = isDarkMode ? darkTheme : lightTheme;
+  const [backgroundPickerVisible, setBackgroundPickerVisible] = useState(false);
+  const { habits, groups, settings, toggleDarkMode, setBackground } = useHabitStore();
+  const theme = settings.isDarkMode ? darkTheme : lightTheme;
 
   const totalDaysTracked = habits.reduce(
     (acc, habit) => acc + habit.completedDates.length,
     0
   );
 
+  const totalStreaks = habits.reduce((acc, habit) => acc + habit.currentStreak, 0);
+
   const handleResetData = () => {
     Alert.alert(
       'Reset All Data',
-      'This will permanently delete all your habits, progress, and unlocked rewards. This action cannot be undone.',
+      'This will permanently delete all your habits, groups, progress, and unlocked rewards. This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -96,7 +100,7 @@ export default function SettingsScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: settings.backgroundColor }]}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
@@ -114,7 +118,15 @@ export default function SettingsScreen() {
                 {habits.length}
               </Text>
               <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-                Active Habits
+                Habits
+              </Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={[styles.statNumber, { color: theme.text }]}>
+                {groups.length}
+              </Text>
+              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                Groups
               </Text>
             </View>
             <View style={styles.statBox}>
@@ -122,7 +134,15 @@ export default function SettingsScreen() {
                 {totalDaysTracked}
               </Text>
               <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-                Days Tracked
+                Tracked
+              </Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={[styles.statNumber, { color: theme.text }]}>
+                {totalStreaks}
+              </Text>
+              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                Streaks
               </Text>
             </View>
           </View>
@@ -135,16 +155,25 @@ export default function SettingsScreen() {
           </Text>
           <View style={[styles.settingsGroup, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <SettingItem
-              icon={isDarkMode ? 'moon' : 'sunny'}
+              icon={settings.isDarkMode ? 'moon' : 'sunny'}
               title="Dark Mode"
               subtitle="Reduce eye strain in low light"
               rightComponent={
                 <Switch
-                  value={isDarkMode}
+                  value={settings.isDarkMode}
                   onValueChange={toggleDarkMode}
                   trackColor={{ false: theme.border, true: theme.primary }}
                   thumbColor="#FFFFFF"
                 />
+              }
+            />
+            <SettingItem
+              icon="color-palette"
+              title="Background"
+              subtitle="Customize app background"
+              onPress={() => setBackgroundPickerVisible(true)}
+              rightComponent={
+                <View style={[styles.colorPreview, { backgroundColor: settings.backgroundColor, borderColor: theme.border }]} />
               }
             />
           </View>
@@ -180,8 +209,22 @@ export default function SettingsScreen() {
             <SettingItem
               icon="information-circle"
               title="Daily Wins"
-              subtitle="Version 1.0.0"
+              subtitle="Version 2.0.0"
             />
+          </View>
+        </View>
+
+        {/* Tips Section */}
+        <View style={[styles.tipsCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Ionicons name="bulb" size={24} color={theme.warning} />
+          <View style={styles.tipsContent}>
+            <Text style={[styles.tipsTitle, { color: theme.text }]}>Pro Tips</Text>
+            <Text style={[styles.tipsText, { color: theme.textSecondary }]}>
+              {'\u2022'} Group habits by time of day for better organization{'\n'}
+              {'\u2022'} Start small with 2-3 habits and build up{'\n'}
+              {'\u2022'} Check habits as soon as you complete them{'\n'}
+              {'\u2022'} Celebrate your streaks to stay motivated!
+            </Text>
           </View>
         </View>
 
@@ -192,6 +235,18 @@ export default function SettingsScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <BackgroundPicker
+        visible={backgroundPickerVisible}
+        onClose={() => setBackgroundPickerVisible(false)}
+        onSelect={(type, color, gradientColors) => {
+          setBackground(type, color, gradientColors);
+          setBackgroundPickerVisible(false);
+        }}
+        currentColor={settings.backgroundColor}
+        theme={theme}
+        isDarkMode={settings.isDarkMode}
+      />
     </SafeAreaView>
   );
 }
@@ -210,7 +265,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   statsCard: {
-    margin: 20,
+    marginHorizontal: 20,
+    marginTop: 12,
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
@@ -229,16 +285,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statNumber: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
   },
   statLabel: {
-    fontSize: 14,
+    fontSize: 12,
     marginTop: 4,
   },
   section: {
     paddingHorizontal: 20,
-    marginBottom: 24,
+    marginTop: 24,
   },
   sectionTitle: {
     fontSize: 12,
@@ -276,9 +332,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
+  colorPreview: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 2,
+  },
+  tipsCard: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginTop: 24,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  tipsContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  tipsTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  tipsText: {
+    fontSize: 13,
+    lineHeight: 20,
+  },
   footer: {
     padding: 40,
     alignItems: 'center',
+    paddingBottom: 100,
   },
   footerText: {
     fontSize: 14,
