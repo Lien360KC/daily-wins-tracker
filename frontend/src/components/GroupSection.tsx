@@ -4,13 +4,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { HabitGroup, Habit } from '../store/habitStore';
 import { Theme } from '../theme/colors';
 import { HabitCard } from './HabitCard';
-import { format } from 'date-fns';
 
 interface GroupSectionProps {
   group: HabitGroup;
@@ -20,6 +18,7 @@ interface GroupSectionProps {
   onToggleHabit: (habitId: string) => void;
   onDeleteHabit: (habitId: string, habitName: string) => void;
   onViewStats: () => void;
+  onEditGroup: () => void;
   isHabitDueToday: (habit: Habit) => boolean;
 }
 
@@ -31,10 +30,10 @@ export const GroupSection: React.FC<GroupSectionProps> = ({
   onToggleHabit,
   onDeleteHabit,
   onViewStats,
+  onEditGroup,
   isHabitDueToday,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
-  const today = format(new Date(), 'yyyy-MM-dd');
 
   return (
     <View style={[styles.container, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -42,6 +41,8 @@ export const GroupSection: React.FC<GroupSectionProps> = ({
       <TouchableOpacity 
         style={styles.header}
         onPress={() => setIsExpanded(!isExpanded)}
+        onLongPress={onEditGroup}
+        delayLongPress={400}
         activeOpacity={0.7}
       >
         <View style={styles.headerLeft}>
@@ -75,6 +76,13 @@ export const GroupSection: React.FC<GroupSectionProps> = ({
             onPress={onViewStats}
           >
             <Ionicons name="stats-chart" size={16} color={theme.primary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.editButton, { backgroundColor: theme.surfaceHover }]}
+            onPress={onEditGroup}
+          >
+            <Ionicons name="pencil" size={16} color={theme.textSecondary} />
           </TouchableOpacity>
           
           <Ionicons 
@@ -149,10 +157,10 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   progressBar: {
-    width: 50,
+    width: 40,
     height: 6,
     borderRadius: 3,
     overflow: 'hidden',
@@ -162,8 +170,15 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   statsButton: {
-    width: 32,
-    height: 32,
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editButton: {
+    width: 30,
+    height: 30,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
