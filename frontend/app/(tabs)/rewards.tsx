@@ -8,7 +8,8 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';\nimport { useHabitStore } from '../../src/store/habitStore';
+import { Ionicons } from '@expo/vector-icons';
+import { useHabitStore } from '../../src/store/habitStore';
 import { lightTheme, darkTheme } from '../../src/theme/colors';
 import { RewardCard } from '../../src/components/RewardCard';
 import { AddRewardModal } from '../../src/components/AddRewardModal';
