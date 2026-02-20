@@ -5,17 +5,17 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import { useHabitStore, HabitGroup } from '../../src/store/habitStore';
+import { useHabitStore, HabitGroup, Habit } from '../../src/store/habitStore';
 import { lightTheme, darkTheme } from '../../src/theme/colors';
 import { ProgressRing } from '../../src/components/ProgressRing';
 import { AddHabitModal } from '../../src/components/AddHabitModal';
 import { AddGroupModal } from '../../src/components/AddGroupModal';
 import { EditGroupModal } from '../../src/components/EditGroupModal';
+import { EditHabitModal } from '../../src/components/EditHabitModal';
 import { GroupSection } from '../../src/components/GroupSection';
 import { GroupStatsModal } from '../../src/components/GroupStatsModal';
 import { CelebrationEffect, CelebrationRef } from '../../src/components/CelebrationEffect';
@@ -24,9 +24,12 @@ export default function TodayScreen() {
   const [habitModalVisible, setHabitModalVisible] = useState(false);
   const [groupModalVisible, setGroupModalVisible] = useState(false);
   const [editGroupModalVisible, setEditGroupModalVisible] = useState(false);
+  const [editHabitModalVisible, setEditHabitModalVisible] = useState(false);
   const [statsModalVisible, setStatsModalVisible] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<HabitGroup | null>(null);
+  const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
   const [hasShownCelebration, setHasShownCelebration] = useState(false);
+  const [showExpandedProgress, setShowExpandedProgress] = useState(false);
   
   const celebrationRef = useRef<CelebrationRef>(null);
   
@@ -38,12 +41,16 @@ export default function TodayScreen() {
     addGroup,
     updateGroup,
     removeGroup,
+    updateHabit,
     removeHabit,
+    moveHabit,
+    reorderHabit,
     toggleHabitCompletion,
     getTodayProgress,
     getGroupProgress,
     getGroupStats,
     isHabitDueOnDate,
+    getHabitsInGroup,
   } = useHabitStore();
 
   const theme = settings.isDarkMode ? darkTheme : lightTheme;
@@ -57,26 +64,10 @@ export default function TodayScreen() {
       celebrationRef.current?.fire();
       setHasShownCelebration(true);
     }
-    // Reset celebration flag when progress drops below 100
     if (progress < 100) {
       setHasShownCelebration(false);
     }
   }, [progress, total, hasShownCelebration]);
-
-  const handleDeleteHabit = (id: string, name: string) => {
-    Alert.alert(
-      'Delete Habit',
-      `Are you sure you want to delete "${name}"? This will remove all your progress.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => removeHabit(id),
-        },
-      ]
-    );
-  };
 
   const handleViewStats = (group: HabitGroup) => {
     setSelectedGroup(group);
@@ -86,6 +77,11 @@ export default function TodayScreen() {
   const handleEditGroup = (group: HabitGroup) => {
     setSelectedGroup(group);
     setEditGroupModalVisible(true);
+  };
+
+  const handleEditHabit = (habit: Habit) => {
+    setSelectedHabit(habit);
+    setEditHabitModalVisible(true);
   };
 
   const getMotivationalMessage = () => {
@@ -121,12 +117,16 @@ export default function TodayScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Progress Card */}
-        <View style={[styles.progressCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        {/* Progress Card - Expandable */}
+        <TouchableOpacity 
+          style={[styles.progressCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
+          onPress={() => setShowExpandedProgress(!showExpandedProgress)}
+          activeOpacity={0.8}
+        >
           <View style={styles.progressContent}>
             <ProgressRing
               progress={progress}
-              size={90}
+              size={85}
               strokeWidth={9}
               backgroundColor={theme.border}
               progressColor={progress === 100 ? theme.success : theme.primary}
@@ -146,8 +146,51 @@ export default function TodayScreen() {
                 {getMotivationalMessage()}
               </Text>
             </View>
+            <Ionicons 
+              name={showExpandedProgress ? "chevron-up" : "chevron-down"} 
+              size={20} 
+              color={theme.textMuted} 
+            />
           </View>
-        </View>
+
+          {/* Expanded Group Progress */}
+          {showExpandedProgress && (
+            <View style={[styles.expandedProgress, { borderTopColor: theme.border }]}>
+              <Text style={[styles.expandedTitle, { color: theme.textSecondary }]}>
+                PROGRESS BY GROUP
+              </Text>
+              {sortedGroups.map((group) => {
+                const groupProgress = getGroupProgress(group.id);
+                return (
+                  <View key={group.id} style={styles.groupProgressItem}>
+                    <View style={styles.groupProgressHeader}>
+                      <View style={[styles.groupIconSmall, { backgroundColor: group.color + '20' }]}>
+                        <Ionicons name={group.icon as any} size={14} color={group.color} />
+                      </View>
+                      <Text style={[styles.groupProgressName, { color: theme.text }]} numberOfLines={1}>
+                        {group.name}
+                      </Text>
+                      <Text style={[styles.groupProgressCount, { color: theme.textSecondary }]}>
+                        {groupProgress.completed}/{groupProgress.total}
+                      </Text>
+                    </View>
+                    <View style={[styles.groupProgressBar, { backgroundColor: theme.border }]}>
+                      <View 
+                        style={[
+                          styles.groupProgressFill, 
+                          { 
+                            width: `${groupProgress.percentage}%`, 
+                            backgroundColor: groupProgress.percentage === 100 ? theme.success : group.color 
+                          }
+                        ]} 
+                      />
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </TouchableOpacity>
 
         {/* Add Habit Button */}
         <TouchableOpacity
@@ -172,7 +215,7 @@ export default function TodayScreen() {
             </View>
           ) : (
             sortedGroups.map((group) => {
-              const groupHabits = habits.filter((h) => h.groupId === group.id);
+              const groupHabits = getHabitsInGroup(group.id);
               const groupProgress = getGroupProgress(group.id);
               
               return (
@@ -183,7 +226,9 @@ export default function TodayScreen() {
                   theme={theme}
                   progress={groupProgress}
                   onToggleHabit={(habitId) => toggleHabitCompletion(habitId, today)}
-                  onDeleteHabit={handleDeleteHabit}
+                  onEditHabit={handleEditHabit}
+                  onMoveHabitUp={(habitId) => reorderHabit(habitId, 'up')}
+                  onMoveHabitDown={(habitId) => reorderHabit(habitId, 'down')}
                   onViewStats={() => handleViewStats(group)}
                   onEditGroup={() => handleEditGroup(group)}
                   isHabitDueToday={(habit) => isHabitDueOnDate(habit, today)}
@@ -216,6 +261,17 @@ export default function TodayScreen() {
         onSave={updateGroup}
         onDelete={removeGroup}
         group={selectedGroup}
+        theme={theme}
+      />
+
+      <EditHabitModal
+        visible={editHabitModalVisible}
+        onClose={() => setEditHabitModalVisible(false)}
+        onSave={updateHabit}
+        onDelete={removeHabit}
+        onMove={moveHabit}
+        habit={selectedHabit}
+        groups={groups}
         theme={theme}
       />
 
@@ -265,7 +321,7 @@ const styles = StyleSheet.create({
   progressCard: {
     marginHorizontal: 20,
     marginTop: 12,
-    padding: 18,
+    padding: 16,
     borderRadius: 16,
     borderWidth: 1,
   },
@@ -275,24 +331,69 @@ const styles = StyleSheet.create({
   },
   progressInfo: {
     flex: 1,
-    marginLeft: 18,
+    marginLeft: 16,
   },
   progressPercent: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
   },
   progressTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
   progressSubtitle: {
     fontSize: 13,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   motivational: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  expandedProgress: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+  },
+  expandedTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    marginBottom: 12,
+  },
+  groupProgressItem: {
+    marginBottom: 12,
+  },
+  groupProgressHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  groupIconSmall: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  groupProgressName: {
+    flex: 1,
     fontSize: 13,
     fontWeight: '500',
+  },
+  groupProgressCount: {
+    fontSize: 12,
+    marginLeft: 8,
+  },
+  groupProgressBar: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  groupProgressFill: {
+    height: '100%',
+    borderRadius: 3,
   },
   addHabitButton: {
     flexDirection: 'row',
