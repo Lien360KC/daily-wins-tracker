@@ -21,6 +21,7 @@ export interface Habit {
   currentStreak: number;
   longestStreak: number;
   createdAt: string;
+  order: number;
 }
 
 export interface HabitGroup {
