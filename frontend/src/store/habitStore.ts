@@ -103,7 +103,6 @@ const DEFAULT_REWARDS: Reward[] = [
   { id: '3', title: 'Week Warrior', description: 'Achieve a 7-day streak', streakRequired: 7, icon: 'trophy', isCustom: false },
   { id: '4', title: 'Habit Builder', description: 'Achieve a 14-day streak', streakRequired: 14, icon: 'medal', isCustom: false },
   { id: '5', title: 'Unstoppable', description: 'Achieve a 30-day streak', streakRequired: 30, icon: 'ribbon', isCustom: false },
-  { id: '6', title: 'Legend', description: 'Achieve a 60-day streak', streakRequired: 60, icon: 'rocket', isCustom: false },
 ];
 
 const DEFAULT_SETTINGS: AppSettings = {
