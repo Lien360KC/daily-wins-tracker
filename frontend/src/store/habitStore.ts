@@ -67,6 +67,9 @@ interface HabitState {
   updateHabit: (id: string, updates: Partial<Habit>) => void;
   removeHabit: (id: string) => void;
   toggleHabitCompletion: (id: string, date: string) => void;
+  moveHabit: (habitId: string, newGroupId: string) => void;
+  reorderHabit: (habitId: string, direction: 'up' | 'down') => void;
+  getHabitsInGroup: (groupId: string) => Habit[];
   
   // Reward actions
   addCustomReward: (title: string, description: string, streakRequired: number, icon: string) => void;
