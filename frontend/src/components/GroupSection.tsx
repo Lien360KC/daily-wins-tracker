@@ -16,7 +16,9 @@ interface GroupSectionProps {
   theme: Theme;
   progress: { completed: number; total: number; percentage: number };
   onToggleHabit: (habitId: string) => void;
-  onDeleteHabit: (habitId: string, habitName: string) => void;
+  onEditHabit: (habit: Habit) => void;
+  onMoveHabitUp: (habitId: string) => void;
+  onMoveHabitDown: (habitId: string) => void;
   onViewStats: () => void;
   onEditGroup: () => void;
   isHabitDueToday: (habit: Habit) => boolean;
@@ -28,12 +30,17 @@ export const GroupSection: React.FC<GroupSectionProps> = ({
   theme,
   progress,
   onToggleHabit,
-  onDeleteHabit,
+  onEditHabit,
+  onMoveHabitUp,
+  onMoveHabitDown,
   onViewStats,
   onEditGroup,
   isHabitDueToday,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
+
+  // Sort habits by order
+  const sortedHabits = [...habits].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   return (
     <View style={[styles.container, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -65,7 +72,7 @@ export const GroupSection: React.FC<GroupSectionProps> = ({
                 styles.progressFill, 
                 { 
                   width: `${progress.percentage}%`, 
-                  backgroundColor: group.color 
+                  backgroundColor: progress.percentage === 100 ? theme.success : group.color 
                 }
               ]} 
             />
@@ -96,21 +103,25 @@ export const GroupSection: React.FC<GroupSectionProps> = ({
       {/* Habits List */}
       {isExpanded && (
         <View style={styles.habitsContainer}>
-          {habits.length === 0 ? (
+          {sortedHabits.length === 0 ? (
             <View style={[styles.emptyState, { borderColor: theme.border }]}>
               <Text style={[styles.emptyText, { color: theme.textMuted }]}>
                 No habits in this group yet
               </Text>
             </View>
           ) : (
-            habits.map((habit) => (
+            sortedHabits.map((habit, index) => (
               <HabitCard
                 key={habit.id}
                 habit={habit}
                 theme={theme}
                 onToggle={() => onToggleHabit(habit.id)}
-                onDelete={() => onDeleteHabit(habit.id, habit.name)}
+                onEdit={() => onEditHabit(habit)}
+                onMoveUp={() => onMoveHabitUp(habit.id)}
+                onMoveDown={() => onMoveHabitDown(habit.id)}
                 isDueToday={isHabitDueToday(habit)}
+                isFirst={index === 0}
+                isLast={index === sortedHabits.length - 1}
               />
             ))
           )}
@@ -184,8 +195,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   habitsContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
   },
   emptyState: {
     padding: 20,
