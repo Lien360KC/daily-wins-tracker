@@ -10,24 +10,35 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import { useHabitStore } from '../../src/store/habitStore';
+import { useHabitStore, HabitGroup } from '../../src/store/habitStore';
 import { lightTheme, darkTheme } from '../../src/theme/colors';
-import { HabitCard } from '../../src/components/HabitCard';
 import { ProgressRing } from '../../src/components/ProgressRing';
 import { AddHabitModal } from '../../src/components/AddHabitModal';
+import { AddGroupModal } from '../../src/components/AddGroupModal';
+import { GroupSection } from '../../src/components/GroupSection';
+import { GroupStatsModal } from '../../src/components/GroupStatsModal';
 
 export default function TodayScreen() {
-  const [modalVisible, setModalVisible] = useState(false);
+  const [habitModalVisible, setHabitModalVisible] = useState(false);
+  const [groupModalVisible, setGroupModalVisible] = useState(false);
+  const [statsModalVisible, setStatsModalVisible] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<HabitGroup | null>(null);
+  
   const {
     habits,
-    isDarkMode,
+    groups,
+    settings,
     addHabit,
+    addGroup,
     removeHabit,
     toggleHabitCompletion,
     getTodayProgress,
+    getGroupProgress,
+    getGroupStats,
+    isHabitDueOnDate,
   } = useHabitStore();
 
-  const theme = isDarkMode ? darkTheme : lightTheme;
+  const theme = settings.isDarkMode ? darkTheme : lightTheme;
   const today = format(new Date(), 'yyyy-MM-dd');
   const { completed, total } = getTodayProgress();
   const progress = total > 0 ? (completed / total) * 100 : 0;
@@ -47,15 +58,24 @@ export default function TodayScreen() {
     );
   };
 
+  const handleViewStats = (group: HabitGroup) => {
+    setSelectedGroup(group);
+    setStatsModalVisible(true);
+  };
+
   const getMotivationalMessage = () => {
     if (total === 0) return "Add your first habit to get started!";
-    if (completed === total) return "You crushed it today! 🔥";
-    if (progress >= 50) return "Keep going, you're doing great!";
+    if (completed === total) return "You crushed it today!";
+    if (progress >= 75) return "Almost there, keep going!";
+    if (progress >= 50) return "Great progress today!";
+    if (progress >= 25) return "Keep the momentum going!";
     return "Let's build some momentum!";
   };
 
+  const sortedGroups = [...groups].sort((a, b) => a.order - b.order);
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: settings.backgroundColor }]}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
@@ -65,6 +85,13 @@ export default function TodayScreen() {
             </Text>
             <Text style={[styles.title, { color: theme.text }]}>Daily Wins</Text>
           </View>
+          <TouchableOpacity
+            style={[styles.addGroupButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
+            onPress={() => setGroupModalVisible(true)}
+          >
+            <Ionicons name="folder-open" size={18} color={theme.primary} />
+            <Ionicons name="add" size={14} color={theme.primary} style={styles.plusIcon} />
+          </TouchableOpacity>
         </View>
 
         {/* Progress Card */}
@@ -72,8 +99,8 @@ export default function TodayScreen() {
           <View style={styles.progressContent}>
             <ProgressRing
               progress={progress}
-              size={100}
-              strokeWidth={10}
+              size={90}
+              strokeWidth={9}
               backgroundColor={theme.border}
               progressColor={theme.primary}
             >
@@ -95,47 +122,71 @@ export default function TodayScreen() {
           </View>
         </View>
 
-        {/* Habits Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Habits</Text>
-            <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: theme.primary }]}
-              onPress={() => setModalVisible(true)}
-            >
-              <Ionicons name="add" size={20} color="#FFFFFF" />
-              <Text style={styles.addButtonText}>Add</Text>
-            </TouchableOpacity>
-          </View>
+        {/* Add Habit Button */}
+        <TouchableOpacity
+          style={[styles.addHabitButton, { backgroundColor: theme.primary }]}
+          onPress={() => setHabitModalVisible(true)}
+        >
+          <Ionicons name="add" size={20} color="#FFFFFF" />
+          <Text style={styles.addHabitButtonText}>Add New Habit</Text>
+        </TouchableOpacity>
 
-          {habits.length === 0 ? (
+        {/* Groups Sections */}
+        <View style={styles.groupsContainer}>
+          {sortedGroups.length === 0 ? (
             <View style={[styles.emptyState, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-              <Ionicons name="list" size={48} color={theme.textMuted} />
+              <Ionicons name="folder-open" size={48} color={theme.textMuted} />
               <Text style={[styles.emptyTitle, { color: theme.text }]}>
-                No habits yet
+                No groups yet
               </Text>
               <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-                Tap "Add" to create your first daily habit
+                Create a group to organize your habits
               </Text>
             </View>
           ) : (
-            habits.map((habit) => (
-              <HabitCard
-                key={habit.id}
-                habit={habit}
-                theme={theme}
-                onToggle={() => toggleHabitCompletion(habit.id, today)}
-                onDelete={() => handleDeleteHabit(habit.id, habit.name)}
-              />
-            ))
+            sortedGroups.map((group) => {
+              const groupHabits = habits.filter((h) => h.groupId === group.id);
+              const groupProgress = getGroupProgress(group.id);
+              
+              return (
+                <GroupSection
+                  key={group.id}
+                  group={group}
+                  habits={groupHabits}
+                  theme={theme}
+                  progress={groupProgress}
+                  onToggleHabit={(habitId) => toggleHabitCompletion(habitId, today)}
+                  onDeleteHabit={handleDeleteHabit}
+                  onViewStats={() => handleViewStats(group)}
+                  isHabitDueToday={(habit) => isHabitDueOnDate(habit, today)}
+                />
+              );
+            })
           )}
         </View>
       </ScrollView>
 
+      {/* Modals */}
       <AddHabitModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        visible={habitModalVisible}
+        onClose={() => setHabitModalVisible(false)}
         onAdd={addHabit}
+        theme={theme}
+        groups={groups}
+      />
+
+      <AddGroupModal
+        visible={groupModalVisible}
+        onClose={() => setGroupModalVisible(false)}
+        onAdd={addGroup}
+        theme={theme}
+      />
+
+      <GroupStatsModal
+        visible={statsModalVisible}
+        onClose={() => setStatsModalVisible(false)}
+        group={selectedGroup}
+        stats={selectedGroup ? getGroupStats(selectedGroup.id) : { totalHabits: 0, completionRate: 0, bestStreak: 0, totalCompletions: 0, weeklyCompletions: [0,0,0,0,0,0,0] }}
         theme={theme}
       />
     </SafeAreaView>
@@ -147,6 +198,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 8,
@@ -160,9 +214,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 4,
   },
+  addGroupButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  plusIcon: {
+    marginLeft: -4,
+    marginTop: -8,
+  },
   progressCard: {
-    margin: 20,
-    padding: 20,
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 18,
     borderRadius: 16,
     borderWidth: 1,
   },
@@ -172,51 +238,44 @@ const styles = StyleSheet.create({
   },
   progressInfo: {
     flex: 1,
-    marginLeft: 20,
+    marginLeft: 18,
   },
   progressPercent: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
   },
   progressTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
     marginBottom: 4,
   },
   progressSubtitle: {
-    fontSize: 14,
-    marginBottom: 8,
+    fontSize: 13,
+    marginBottom: 6,
   },
   motivational: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
   },
-  section: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  addButton: {
+  addHabitButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 4,
+    justifyContent: 'center',
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 14,
+    borderRadius: 12,
+    gap: 8,
   },
-  addButtonText: {
+  addHabitButtonText: {
     color: '#FFFFFF',
+    fontSize: 15,
     fontWeight: '600',
-    fontSize: 14,
+  },
+  groupsContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 100,
   },
   emptyState: {
     alignItems: 'center',
