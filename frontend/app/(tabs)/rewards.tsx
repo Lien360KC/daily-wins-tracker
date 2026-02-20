@@ -5,18 +5,21 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useHabitStore } from '../../src/store/habitStore';
+import { useHabitStore, Reward } from '../../src/store/habitStore';
 import { lightTheme, darkTheme } from '../../src/theme/colors';
 import { RewardCard } from '../../src/components/RewardCard';
 import { AddRewardModal } from '../../src/components/AddRewardModal';
+import { EditRewardModal } from '../../src/components/EditRewardModal';
 
 export default function RewardsScreen() {
   const [addRewardVisible, setAddRewardVisible] = useState(false);
-  const { habits, rewards, unlockedRewards, settings, addCustomReward, removeReward } = useHabitStore();
+  const [editRewardVisible, setEditRewardVisible] = useState(false);
+  const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
+  
+  const { habits, rewards, unlockedRewards, settings, addCustomReward, updateReward, removeReward } = useHabitStore();
   const theme = settings.isDarkMode ? darkTheme : lightTheme;
 
   const maxStreak = Math.max(...habits.map((h) => h.currentStreak), 0);
@@ -24,24 +27,9 @@ export default function RewardsScreen() {
 
   const sortedRewards = [...rewards].sort((a, b) => a.streakRequired - b.streakRequired);
 
-  const handleDeleteReward = (id: string, title: string, isCustom: boolean) => {
-    if (!isCustom) {
-      Alert.alert('Cannot Delete', 'Default rewards cannot be deleted.');
-      return;
-    }
-    
-    Alert.alert(
-      'Delete Reward',
-      `Are you sure you want to delete "${title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => removeReward(id),
-        },
-      ]
-    );
+  const handleEditReward = (reward: Reward) => {
+    setSelectedReward(reward);
+    setEditRewardVisible(true);
   };
 
   return (
@@ -93,11 +81,14 @@ export default function RewardsScreen() {
         {/* Rewards List */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Achievements</Text>
+          <Text style={[styles.sectionHint, { color: theme.textMuted }]}>
+            Tap any reward to edit it
+          </Text>
           {sortedRewards.map((reward) => (
             <TouchableOpacity
               key={reward.id}
-              onLongPress={() => handleDeleteReward(reward.id, reward.title, reward.isCustom)}
-              delayLongPress={500}
+              onPress={() => handleEditReward(reward)}
+              activeOpacity={0.7}
             >
               <RewardCard
                 reward={reward}
@@ -113,12 +104,9 @@ export default function RewardsScreen() {
         <View style={[styles.infoCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Ionicons name="bulb" size={24} color={theme.warning} />
           <View style={styles.infoContent}>
-            <Text style={[styles.infoTitle, { color: theme.text }]}>Create Your Own Rewards</Text>
+            <Text style={[styles.infoTitle, { color: theme.text }]}>Personalize Your Rewards</Text>
             <Text style={[styles.infoText, { color: theme.textSecondary }]}>
-              Tap the + button to add custom rewards. Set your own milestones and treat yourself!
-            </Text>
-            <Text style={[styles.infoHint, { color: theme.textMuted }]}>
-              Long press a custom reward to delete it.
+              Tap the + button to create new rewards, or tap any existing reward to customize it. Make your rewards meaningful to you!
             </Text>
           </View>
         </View>
@@ -142,6 +130,15 @@ export default function RewardsScreen() {
         visible={addRewardVisible}
         onClose={() => setAddRewardVisible(false)}
         onAdd={addCustomReward}
+        theme={theme}
+      />
+
+      <EditRewardModal
+        visible={editRewardVisible}
+        onClose={() => setEditRewardVisible(false)}
+        onSave={updateReward}
+        onDelete={removeReward}
+        reward={selectedReward}
         theme={theme}
       />
     </SafeAreaView>
@@ -216,7 +213,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 16,
+    marginBottom: 4,
+  },
+  sectionHint: {
+    fontSize: 12,
+    marginBottom: 12,
   },
   infoCard: {
     flexDirection: 'row',
@@ -238,11 +239,6 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 13,
     lineHeight: 18,
-  },
-  infoHint: {
-    fontSize: 11,
-    marginTop: 6,
-    fontStyle: 'italic',
   },
   motivationalCard: {
     margin: 20,
