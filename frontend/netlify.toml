@@ -1,21 +1,9 @@
 [build]
-  # Tell Netlify to enter the 'frontend' folder first
   base = "frontend"
-  
-  # Use the exact build script from your package.json
-  command = "npm run build"
-  
-  # Based on Expo 54, the output folder is 'dist' 
-  # Since base is 'frontend', this path is relative to that
+  command = "npx expo export --platform web --clear"
   publish = "dist"
 
-[build.environment]
-  # We know your app needs Node 20+ from the previous errors
-  NODE_VERSION = "20.19.4"
-
 [[redirects]]
-  # This is CRITICAL for Expo Router. 
-  # It ensures the JavaScript 'brain' takes over the URL.
   from = "/*"
   to = "/index.html"
   status = 200
