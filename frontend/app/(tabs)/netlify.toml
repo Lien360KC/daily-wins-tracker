@@ -1,0 +1,17 @@
+[build]
+  # This tells Netlify where your code actually lives
+  base = "frontend"
+  
+  # This runs the build command using Node 20
+  command = "npm run build"
+  
+  # This points Netlify to the folder where the finished site is created
+  publish = "frontend/dist"
+
+[build.environment]
+  NODE_VERSION = "20.19.4"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
